@@ -31,7 +31,7 @@ def due():
     tenants = Tenants.query.filter_by(tenant_status="1").all()
 
     for t in tenants:
-        a = 1
+        a = 0
         pays = Pays.query.filter(and_(Pays.tenantID==t.tenantID, Pays.stallID==t.stallID)).all()
         for p in pays:
             month = date_cut(p.date_issued, [5,6])
@@ -39,22 +39,28 @@ def due():
 
             if year==date_cut(now,[0,1,2,3]):
                 if month==date_cut(now, [5,6]):
-                    pass
-                else:
-                    a = 0
-            else: 
-                a = 0
+                    a = a + 1
+        print a
+
         if a==0:
-            name = t.last_name + ', ' + t.first_name + ' ' +t.mid_name
-            notif = Notification(name=name, description="Have not yet done any payment this month", date=str(now), tenant_id=t.tenantID, stall_id=t.stallID)
-            dbase.session.add(notif)
-            dbase.session.commit()
+            notifier = Notification.query.filter(and_(and_(Notification.tenant_id==t.tenantID, Notification.stall_id==t.stallID), Notification.status==1)).first()
+            if notifier is None:
+                name = t.last_name + ', ' + t.first_name + ' ' +t.mid_name
+                notif = Notification(name=name, description="Have not yet done any payment this month", date=str(now), tenant_id=t.tenantID, stall_id=t.stallID)
+                dbase.session.add(notif)
+                dbase.session.commit()
 
 def notif_count():
     notif = Notification.query.filter_by(seen="0").all()
     if notif:
         return len(notif)
-    return 0        
+    return 0      
+
+def change_notif_status(tenID, stID):
+    notif = Notification.query.filter(and_(Notification.tenant_id==tenID, Notification.stall_id==stID)).first()
+    notif.status = 0
+    dbase.session.add(notif)
+    dbase.session.commit()
 
 def search_panel(cond):
     if cond==1:
@@ -519,8 +525,8 @@ def stalllist():
 @login_required
 @required_roles(1)
 def logs():
-    if date_cut(now, [8,9])=='21':
-        due() 
+    #if date_cut(now, [8,9])=='21':
+    due() 
     user = current_user
     lgdate = datelog
     msg = user.username + " viewed the logs "
@@ -537,6 +543,7 @@ def logs():
 @login_required
 @required_roles(1,2)
 def paymenttable(id, s_id):
+    change_notif_status(id, s_id)
     pays = Pays.query.filter(and_(Pays.tenantID==id, Pays.stallID==s_id)).all()
     someNum = Stalls.query.filter_by(stallID=s_id).first()
     tenant_1 = Tenants.query.filter(and_(Tenants.tenantID==id, Tenants.stallID==someNum.stallID)).first()
@@ -560,7 +567,7 @@ def paymenttable(id, s_id):
 
     if request.method=='POST' and form.validate_on_submit():
         tenant_1.balance=0.0    
-        if int(form.amount.data)<int(form.total.data):
+        if float(form.amount.data)<float(form.total.data):
             tenant_1.balance = float(form.total.data)-float(form.amount.data)
         dbase.session.add(tenant_1)
         dbase.session.commit()
@@ -606,6 +613,7 @@ def payment():
 @login_required
 @required_roles(1,2)
 def edit_tenant(id, s_id):
+    change_notif_status(id, s_id)
     form = edit_tenant_form()
     tenant = Tenants.query.filter_by(tenantID=id).first()
     if request.method=='POST':
@@ -683,7 +691,7 @@ def pay_tenant():
 
         tenant_0 = Tenants.query.filter(and_(Tenants.tenantID==int(request.args.get('tenant_id')), Tenants.stallID==int(request.args.get('stall_id')))).first()
         tenant_0.balance=0.0    
-        if int(request.args.get('amount'))<int(request.args.get('total')):
+        if float(request.args.get('amount'))<float(request.args.get('total')):
             tenant_0.balance = float(request.args.get('total'))-float(request.args.get('amount'))
         dbase.session.add(tenant_0)
         dbase.session.commit()
@@ -707,6 +715,7 @@ def pay_tenant():
 
 @app.route('/evict_tenant/<int:id>/<int:s_id>')
 def evict_tenant(id,s_id):
+    change_notif_status(id, s_id)
     etanant = Tenants.query.filter(and_(Tenants.tenantID==id, Tenants.stallID == s_id)).first()
     estall =Stalls.query.filter_by(stallID=s_id).first()
     if etanant.tenant_status =='1':
@@ -738,7 +747,12 @@ def notify():
 
     show_notif = Notification.query.all()
 
-    return render_template('notification.html', notif=show_notif, notif_count=notif_count())
+    x = []
+    for show in show_notif:
+        tenant = Tenants.query.filter_by(tenantID=show.tenant_id).first()
+        x.append(tenant.tenant_status)
+
+    return render_template('notifications.html', notif=show_notif, notif_count=notif_count(), tenant_status=x)
 
 @app.route('/about')
 @app.route('/about/')

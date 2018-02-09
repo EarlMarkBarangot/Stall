@@ -94,7 +94,8 @@
                 </div>
             </li>
             <li style="margin-top:0%; left:-4%;">
-                <a href="/notifications2" style="color:#5BC0DC;"><span class="glyphicon glyphicon-bell" ></span> <strong style="font-size:110%;">Notifications</strong></a>
+                <a href="/notifications2" style="color:#5BC0DC;"><span class="glyphicon glyphicon-bell" ></span> <strong style="font-size:110%;">Notifications
+                    {% if notif_count>0 %}<span class="badge pull-right">{{ notif_count }}</span>{% endif %}</strong></a>
             </li>
             <li class="dropdown" style="background-color: #0f0d15;">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#" style="color: #5BC0DC;">

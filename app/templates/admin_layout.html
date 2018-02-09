@@ -112,7 +112,8 @@
             </li>
             <li style="color:#5BC0DC; margin-top:5%; left:-4%";>
                     <strong>
-                        <span class="glyphicon glyphicon-bell"></span> Notifications
+                        <a href='/notifications' style="color:#5BC0DC;">
+                        <span class="glyphicon glyphicon-bell"></span> Notifications {% if notif_count>0 %}<span class="badge pull-right">{{ notif_count }}</span>{% endif %}</a>
                     </strong>
 
             </li>
